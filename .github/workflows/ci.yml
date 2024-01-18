@@ -1,0 +1,53 @@
+name: DevSecOps CI Pipeline
+
+on:
+  push:
+    branches:
+      - 'test'
+
+jobs:
+  sast_scan:
+    name: Run Bandit Scan for SAST
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit Scan
+        run: bandit -ll -ii -r . -f json -o bandit-report.json
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: bandit-findings
+          path: bandit-report.json
+
+  sca_scan:
+    name: Run Software Composition Analysis Checks with Snyk
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/python-3.8@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
